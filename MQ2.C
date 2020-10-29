@@ -109,6 +109,7 @@ float MQRead()
     for (i=0;i<READ_SAMPLE_TIMES;i++) 
     {
         rs += MQResistanceCalculation(val);
+        vTaskDelay(100/portTICK_PERIOD_MS);
     }
         
     rs = rs/READ_SAMPLE_TIMES;
