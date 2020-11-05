@@ -12,10 +12,10 @@
 
 #include "MQ2.h"
 
-//static esp_adc_cal_characteristics_t *adc_chars;
+static esp_adc_cal_characteristics_t *adc_chars;
 static const adc_channel_t channel = ADC1_CHANNEL_0;    //GPIO 36 For channel 0 --> gas sensor analog pin
 
-static const adc_bits_width_t width = ADC_WIDTH_BIT_12;  //ADC capture width is 12Bit. Only ESP32 is supported.
+static const adc_bits_width_t width = ADC_WIDTH_BIT_10;  //ADC capture width is 10 (Range 0-1023)
 
 static const adc_atten_t atten = ADC_ATTEN_DB_0;      //No input attenumation, ADC can measure up to approx. 800 mV.
 
@@ -24,8 +24,8 @@ void begin()
 
     printf("Calibrating...\n");
     Ro = MQCalibration();
-    printf("Ro: %.2lf Kohm\n",Ro);
-    printf("Calibrating is done....\n");
+    printf("Calibration Done\n");
+    printf("Ro: %.2lf Kohm\n",Ro); 
 }
 
 /***************************** MQCalibration ****************************************
@@ -41,9 +41,12 @@ float MQCalibration() {
     
     //printf("MQCalibration\n");
     float val=0;
+    adc1_config_width(width);
+    adc1_config_channel_atten(channel,atten);
     for (int i=0;i<CALIBARAION_SAMPLE_TIMES;i++) {            //take multiple samples
-        val += MQResistanceCalculation(adc1_get_raw(channel));
-        printf("%d----%.4f\n",i,val);
+        int caliread = adc1_get_raw(channel);
+        val += MQResistanceCalculation(caliread);
+        printf(":i value:%d:Calibration ADC:%d:Val====:%.4f::\n",i,caliread,val);
         vTaskDelay(100/portTICK_PERIOD_MS);
     }
     
@@ -75,12 +78,15 @@ float* read(bool print){
    co = MQGetGasPercentage(MQRead()/Ro,GAS_CO);
    smoke = MQGetGasPercentage(MQRead()/Ro,GAS_SMOKE);
 
-    if (print)
-   {
+       if(lpg > 1000 || co > 1000 || smoke > 1000){
+       printf("!!!GAS DETECTTED!!!\n");
        printf("\nLPG::%.2f::ppm\n",lpg);
-       printf("CO::%.2f::ppm\n",co);
-       printf("SMOKE::%.2f::ppm\n\n",smoke);
-       vTaskDelay(100/portTICK_PERIOD_MS);
+       printf("\nCO::%.2f::ppm\n",co);
+       printf("\nSMOKE::%.2f::ppm\n\n",smoke);   
+   }
+       else
+   {
+       printf("::GAS NOT DETECTED::\n");
    }
    lastReadTime = xthal_get_ccount();
    float values[3] = {lpg,co,smoke};
@@ -101,10 +107,11 @@ float MQRead()
     float rs=0;
     adc1_config_width(width);
     adc1_config_channel_atten(channel,atten);
+    
     int val = adc1_get_raw(channel);
     printf("ADC1 Raw Value :: Sensor Reading:: %d :\n", val);
-    //uint32_t voltage = esp_adc_cal_raw_to_voltage(val, adc_chars);
-    //printf("ADC1 Raw Value :: In Voltage:: %d :\n", voltage);
+    uint32_t voltage = esp_adc_cal_raw_to_voltage(val, adc_chars);
+    printf("ADC1 Raw Value :: In Voltage:: %d :\n",val, voltage);
     
     for (i=0;i<READ_SAMPLE_TIMES;i++) 
     {
@@ -125,7 +132,6 @@ Remarks: This function passes different curves to the MQGetPercentage function w
 ************************************************************************************/ 
 
 float MQGetGasPercentage(float rs_ro_ratio, int gas_id) {
-  //printf("MQGetGasPercentage\n");
   if ( gas_id == GAS_LPG ) 
   {
      return MQGetPercentage(rs_ro_ratio,LPGCurve);
@@ -157,7 +163,6 @@ int MQGetPercentage(float rs_ro_ratio, float *pcurve) {
 
 /*****************************  readLPG Value --every 10sec interval **********************************/
 float readLPG(){
-    //printf("readLPG\n");
     if (xthal_get_ccount()<(lastReadTime + 10000) && lpg != 0)
     {
         return lpg;
@@ -168,11 +173,9 @@ float readLPG(){
     }
 }
 
-
 /*****************************  readCO Value -- every 10sec interval **********************************/
 float readCO()
 {
-    //printf("readCO\n");
     if (xthal_get_ccount()<(lastReadTime + 10000) && co != 0){
         return co;
     }
@@ -185,7 +188,6 @@ float readCO()
 
 float readSmoke()
 {
-    //printf("readSmoke\n");
     if (xthal_get_ccount()<(lastReadTime + 10000) && smoke != 0)
     {
         return smoke;
