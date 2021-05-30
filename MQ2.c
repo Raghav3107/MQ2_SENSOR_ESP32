@@ -204,5 +204,4 @@ void app_main()
     while(1){
         read(true);
     }
-    printf("Main App End\n");
 }
