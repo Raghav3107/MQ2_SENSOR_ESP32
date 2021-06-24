@@ -8,7 +8,7 @@ MQ2 sensor test with esp32 on esp-idf.
 
 |     |     |
 | --- | --- |
-| **MQ2 Sensor** | ** ESP32** |
+| **MQ2 Sensor** | **ESP32** |
 | Vin | 3.3 V |
 | GND | GND |
 | OutPut Pin | 36  |
