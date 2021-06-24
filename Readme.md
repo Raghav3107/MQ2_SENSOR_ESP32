@@ -1,5 +1,3 @@
-﻿MQ2 Sensor with ESP-IDF
-
 # MQ2 Sensor with ESP-IDF
 
 MQ2 sensor test with esp32 on esp-idf.
